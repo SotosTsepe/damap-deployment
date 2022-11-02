@@ -1,0 +1,29 @@
+body {
+  background-color: #069;
+  color: white;
+  font-weight: bold;
+  font-family: Arial, sans-serif;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+#logo {
+    width: 100px;
+    height: 50px;
+    padding-top: 10px;
+    padding-bottom: 20px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+#barrier {
+    width: 100px;
+    padding-top: 50px;
+}
+
+.centered {
+  text-align: center;
+  vertical-align: middle;
+}

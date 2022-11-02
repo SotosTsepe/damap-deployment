@@ -1,0 +1,13 @@
+# docker-compose file for the "down for maintenance" page
+
+version: '3.3'
+services:
+  maintenance:
+    build: ./docker/maintenance
+    container_name: damap_maintenance
+    user: nginx
+    cap_drop:
+      - ALL
+    ports:
+      - "80:8080"
+    restart: "unless-stopped"
