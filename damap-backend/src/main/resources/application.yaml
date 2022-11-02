@@ -1,0 +1,104 @@
+# custom config settings
+# replace these in the config of your custom project or by overriding these variables
+damap:
+  env: DEV # override in your custom project with PROD for production deployment
+  origins: http://localhost:8085 # https://your.frontend.com,https://*.yourdomain.com
+  auth:
+    backend:
+      url: http://keycloak:8080/auth/realms/damap # https://your.authentication.server
+      client: 'damap-be' # your-backend-authentication-client-id
+    frontend:
+      url: http://localhost:8087/auth/realms/damap # usually the same as the backend url
+      client: 'damap' # your-frontend-authentication-client-id
+    scope: 'openid profile email offline_access microprofile-jwt roles personID' # your-backend-authentication-scope, including your variable for your user IDs
+    user: 'personID' # the variable name for your user IDs
+  datasource:
+    url: jdbc:postgresql://damap-db:5432/damap # jdbc:your-datasource-language:your-datasource.address
+    username: damap # your-datasource-username
+    password: damap # your-datasource-password
+  repositories:
+    recommendation: [ your-recommened-repositories ]
+  projects-url: http://api-mock:80
+  persons-url: http://api-mock:80
+  fits-url: http://your.fits.service:1234
+
+# general config settings
+quarkus:
+  http:
+    cors:
+      ~: true
+      origins: ${damap.origins}
+      headers: origin,content-type,accept,authorization
+      access-control-max-age: 1
+
+  oidc:
+    auth-server-url: ${damap.auth.backend.url}
+    client-id: ${damap.auth.backend.client}
+    token:
+      issuer: ${damap.auth.frontend.url}
+
+  datasource:
+    jdbc:
+      url: ${damap.datasource.url}
+    db-kind: postgresql
+    username: ${damap.datasource.username}
+    password: ${damap.datasource.password}
+
+  hibernate-orm:
+    database:
+      generation: none
+    sql-load-script: no-file
+
+  cache:
+    caffeine:
+      "repositories":
+        expire-after-write: P1D
+      "repository":
+        expire-after-write: P1D
+
+  liquibase:
+    migrate-at-start: true
+    change-log: db/changeLog.yaml
+
+rest:
+  projects/mp-rest/url: ${damap.projects-url}
+  persons/mp-rest/url: ${damap.persons-url}
+  fits/mp-rest/url: ${damap.fits-url}
+  r3data:
+    repositories/mp-rest/url: https://www.re3data.org/api
+    repositories/mp-rest/scope: javax.inject.Singleton
+  openaire/mp-rest/url: http://api.openaire.eu/search/
+
+"%dev":
+  damap:
+    origins: http://localhost:4200
+    datasource:
+      url: jdbc:postgresql://localhost:5432/damap
+      username: damap
+      password: damap
+
+"%oracle":
+  quarkus:
+    datasource:
+      db-kind: oracle
+    hibernate-orm:
+      dialect: org.hibernate.dialect.Oracle12cDialect
+
+"%postgres":
+  quarkus:
+    datasource:
+      db-kind: postgresql
+    hibernate-orm:
+      dialect: org.hibernate.dialect.PostgreSQLDialect
+
+"%test":
+  damap:
+    repositories:
+      recommendation: ['r3d100013557'] # Re3Data id(s)
+  quarkus:
+    datasource:
+      db-kind: h2
+      jdbc:
+        url: jdbc:h2:mem:test
+    oidc:
+      enabled: false
