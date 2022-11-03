@@ -25,6 +25,7 @@ export class ConfigService {
         } else {
           this.config = config;
           const authConfig: AuthConfig = {
+            requireHttps: false,
             issuer: config.authUrl,
             clientId: config.authClient,
             redirectUri: window.location.origin,
