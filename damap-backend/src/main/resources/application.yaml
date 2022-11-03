@@ -15,7 +15,7 @@ damap:
   datasource:
     url: jdbc:postgresql://damap-db:5432/damap # jdbc:your-datasource-language:your-datasource.address
     username: damap # your-datasource-username
-    password: pw4damap # your-datasource-password
+    password: damap # your-datasource-password
   repositories:
     recommendation: [ your-recommened-repositories ]
   projects-url: http://api-mock:80
@@ -75,7 +75,7 @@ rest:
     datasource:
       url: jdbc:postgresql://localhost:5432/damap
       username: damap
-      password: pw4damap
+      password: damap
 
 "%oracle":
   quarkus:
