@@ -38,11 +38,11 @@ services:
       DB_SCHEMA: public
       KEYCLOAK_USER: ${KEYCLOAK_USER:-admin}
       KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD:-admin}
-      KEYCLOAK_IMPORT: /tmp/sample-damap-realm-export.json
+      KEYCLOAK_IMPORT: /tmp/${KEYCLOAK_REALM_EXPORT:-realm-export.json}
     ports:
       - "8087:8080"
     volumes:
-      - ./docker/keycloak/sample-damap-realm-export.json:/tmp/sample-damap-realm-export.json
+      - ./docker/keycloak/${KEYCLOAK_REALM_EXPORT:-realm-export.json}:/tmp/${KEYCLOAK_REALM_EXPORT:-realm-export.json}
     restart: "unless-stopped"
 
   damap-fe:
