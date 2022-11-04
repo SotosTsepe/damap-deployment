@@ -32,17 +32,19 @@ services:
       PROXY_ADDRESS_FORWARDING: "true"
       DB_VENDOR: POSTGRES
       DB_ADDR: damap-db
+      # the DB_DATABASE has to match one of the values provided in the POSTGRES_MULTIPLE_DATABASES
       DB_DATABASE: ${KEYCLOAK_DB:-keycloak}
       DB_USER: ${KEYCLOAK_DB_USER:-keycloak}
       DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
       DB_SCHEMA: public
       KEYCLOAK_USER: ${KEYCLOAK_USER:-admin}
       KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD:-admin}
-      KEYCLOAK_IMPORT: /tmp/${KEYCLOAK_REALM_EXPORT:-realm-export.json}
+      # comma separated paths of realm files to import
+      KEYCLOAK_IMPORT: ${KEYCLOAK_IMPORT}
     ports:
       - "8087:8080"
     volumes:
-      - ./docker/keycloak/${KEYCLOAK_REALM_EXPORT:-realm-export.json}:/tmp/${KEYCLOAK_REALM_EXPORT:-realm-export.json}
+      - ./docker/keycloak/import:/tmp/import
     restart: "unless-stopped"
 
   damap-fe:
