@@ -2,7 +2,7 @@ version: '3.3'
 
 services:
   damap-be:
-    build: ./
+    build: ./damap-backend
     container_name: "damap-backend"
     restart: "unless-stopped"
 
@@ -49,7 +49,7 @@ services:
 
   damap-fe:
     build:
-      context: ../damap-frontend
+      context: ./damap-frontend
     container_name: "damap-frontend"
     restart: "unless-stopped"
 
