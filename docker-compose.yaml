@@ -48,8 +48,7 @@ services:
     restart: "unless-stopped"
 
   damap-fe:
-    build:
-      context: ./damap-frontend
+    build: ./damap-frontend
     container_name: "damap-frontend"
     restart: "unless-stopped"
 
@@ -65,13 +64,34 @@ services:
     restart: "unless-stopped"
 
   nginx:
-    image: registry.hub.docker.com/library/nginx
+    build: ./docker/nginx
     container_name: "nginx"
+    environment:
+      HTTP_AUTH_USER: ${HTTP_AUTH_USER:-admin}
+      HTTP_AUTH_PASSWORD: ${HTTP_AUTH_PASSWORD:-admin}
     volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - monitoring-report:/srv/report
+      # share nginx logs to host so that goaccess can access them
+      - ./docker/nginx/logs:/var/log/nginx
     ports:
       - "80:80"
     restart: "unless-stopped"
 
+  # Monitoring service
+  goaccess:
+    build: ./docker/goaccess
+    container_name: goaccess
+    environment:
+      - TZ=${TZ:-Europe/Vienna}
+    volumes:
+      - monitoring-data:/srv/data
+      - monitoring-report:/srv/report
+      - ./docker/nginx/logs:/srv/logs
+    ports:
+      - "7890:7890"
+    restart: "unless-stopped"
+
 volumes:
   db-data:
+  monitoring-data:
+  monitoring-report:
