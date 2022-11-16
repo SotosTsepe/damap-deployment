@@ -3,11 +3,20 @@
 version: '3.3'
 services:
   maintenance:
-    build: ./docker/maintenance
+    build:
+      # Use docker directory as context since ssl certificates are to be used from multiple services
+      # With this way we can copy the certificates to the container while keeping them outside of a
+      # specific service
+      context: ./docker
+      dockerfile: ./maintenance/Dockerfile
     container_name: damap_maintenance
+    environment:
+      SSL_CERTIFICATE: ${SSL_CERTIFICATE:-test.crt}
+      SSL_KEY: ${SSL_KEY:-test.key}
     user: nginx
     cap_drop:
       - ALL
     ports:
       - "80:8080"
+      - "443:8443"
     restart: "unless-stopped"

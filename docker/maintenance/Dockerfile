@@ -1,10 +1,8 @@
 FROM nginx:1
 
-COPY conf.d/ /etc/nginx/conf.d/
-COPY data /data
-
-# RUN chown -R nginx /etc/nginx && \
-#     chown -R nginx /var/cache/nginx
+COPY maintenance/templates /etc/nginx/templates/
+COPY maintenance/data /data
+COPY ssl /etc/nginx/ssl
 
 ## add permissions for nginx user
 RUN chown -R nginx /var/cache/nginx && \
