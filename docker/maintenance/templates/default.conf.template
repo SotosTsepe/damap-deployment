@@ -1,0 +1,32 @@
+# HTTP server
+server {
+    listen 8080;
+    listen [::]:8080; # IPv6
+    server_name _;
+
+    # redirect everything to https
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# HTTPS server
+server {
+    listen 8443 ssl;
+    listen [::]:8443 ssl; # IPv6
+    server_name _;
+
+    ssl_certificate /etc/nginx/ssl/${SSL_CERTIFICATE};
+    ssl_certificate_key /etc/nginx/ssl/${SSL_KEY};
+
+    root /data/;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /static/ {
+        alias /data/static/;
+    }
+}

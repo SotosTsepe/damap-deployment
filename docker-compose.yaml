@@ -42,9 +42,10 @@ services:
       # comma separated paths of realm files to import
       KEYCLOAK_IMPORT: ${KEYCLOAK_IMPORT}
     ports:
-      - "8087:8080"
+      - "8087:8443"
     volumes:
       - ./docker/keycloak/import:/tmp/import
+      - ./docker/ssl:/etc/x509/https
     restart: "unless-stopped"
 
   damap-fe:
@@ -64,17 +65,25 @@ services:
     restart: "unless-stopped"
 
   nginx:
-    build: ./docker/nginx
+    build:
+      # Use docker directory as context since ssl certificates are to be used from multiple services
+      # With this way we can copy the certificates to the container while keeping them outside of a
+      # specific service
+      context: ./docker
+      dockerfile: ./nginx/Dockerfile
     container_name: "nginx"
     environment:
       HTTP_AUTH_USER: ${HTTP_AUTH_USER:-admin}
       HTTP_AUTH_PASSWORD: ${HTTP_AUTH_PASSWORD:-admin}
+      SSL_CERTIFICATE: ${SSL_CERTIFICATE:-test.crt}
+      SSL_KEY: ${SSL_KEY:-test.key}
     volumes:
       - monitoring-report:/srv/report
       # share nginx logs to host so that goaccess can access them
       - ./docker/nginx/logs:/var/log/nginx
     ports:
       - "80:80"
+      - "443:443"
     restart: "unless-stopped"
 
   # Monitoring service

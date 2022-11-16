@@ -1,0 +1,39 @@
+# HTTP server
+server {
+    listen 80;
+    listen [::]:80; # IPv6
+    server_name _;
+
+    # redirect everything to https
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# HTTPS server
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl; # IPv6
+    server_name _;
+
+    ssl_certificate /etc/nginx/ssl/${SSL_CERTIFICATE};
+    ssl_certificate_key /etc/nginx/ssl/${SSL_KEY};
+
+    # Proxying to the application server
+    location / {
+        proxy_pass http://damap-fe:8080;
+    }
+    # Proxying to the API
+    location /api/ {
+        proxy_pass http://damap-be:8080;
+    }
+    # Proxying to the server statistics
+    location /stats {
+        # Serve goaccess html file
+        root /srv/report;
+        try_files /report.html =404;
+        # Secure route
+        auth_basic "Restricted Content";
+        auth_basic_user_file /etc/nginx/.htpasswd;
+    }
+}
