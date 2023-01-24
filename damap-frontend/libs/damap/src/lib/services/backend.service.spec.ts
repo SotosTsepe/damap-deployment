@@ -1,15 +1,17 @@
-import {TestBed} from '@angular/core/testing';
-import {BackendService} from './backend.service';
-import {HttpClientTestingModule, HttpTestingController} from '@angular/common/http/testing';
-import {FeedbackService} from './feedback.service';
-import {Project} from '../domain/project';
-import {Dmp} from '../domain/dmp';
-import {completeDmp} from '../mocks/dmp-mocks';
-import {HttpEventType, HttpHeaders} from '@angular/common/http';
-import {TranslateTestingModule} from '../testing/translate-testing/translate-testing.module';
-import {Contributor} from '../domain/contributor';
-import {closedDatasetMock} from '../mocks/dataset-mocks';
-import {APP_ENV} from '../constants';
+import { TestBed } from "@angular/core/testing";
+import { BackendService } from "./backend.service";
+import { HttpClientTestingModule, HttpTestingController } from "@angular/common/http/testing";
+import { FeedbackService } from "./feedback.service";
+import { Project } from "../domain/project";
+import { Dmp } from "../domain/dmp";
+import { completeDmp } from "../mocks/dmp-mocks";
+import { HttpEventType, HttpHeaders } from "@angular/common/http";
+import { TranslateTestingModule } from "../testing/translate-testing/translate-testing.module";
+import { Contributor } from "../domain/contributor";
+import { closedDatasetMock } from "../mocks/dataset-mocks";
+import { APP_ENV } from "../constants";
+import { mockAccess } from "../mocks/access-mocks";
+import { EMPTY } from "rxjs";
 
 describe('BackendService', () => {
   let service: BackendService;
@@ -84,6 +86,36 @@ describe('BackendService', () => {
     req.flush(completeDmp);
   });
 
+  it("should get all accesses for dmp", () => {
+    service.getAccess(completeDmp.id).subscribe(
+      accesses => {
+        expect(accesses).toBeTruthy();
+        expect(accesses.length).toBe(1);
+      }
+    );
+
+    const req = httpTestingController.expectOne(`${backendUrl}access/dmps/${completeDmp.id}`);
+    req.flush([mockAccess]);
+  });
+
+
+  it("should create access", () => {
+    service.createAccess(mockAccess).subscribe(
+      access => expect(access).toBeTruthy()
+    );
+
+    const req = httpTestingController.expectOne(`${backendUrl}access`);
+    req.flush(mockAccess);
+  });
+
+  it("should delete access", () => {
+    service.deleteAccess(mockAccess.id).subscribe(
+      access => expect(access).toBe(EMPTY)
+    );
+
+    const req = httpTestingController.expectOne(`${backendUrl}access/${mockAccess.id}`);
+    req.flush(EMPTY);
+  });
 
   it('should retrieve all repositories', () => {
     service.getRepositories().subscribe(
@@ -100,19 +132,18 @@ describe('BackendService', () => {
     req.flush([{id: 'r3d100012810', name: 'Random Repo'}]);
   });
 
-  /*  it('should retrieve repository by Id', () => {
+    it('should retrieve repository by Id', () => {
       const id = 'r3d100012810';
       service.getRepositoryById(id).subscribe(
         repos => {
           expect(repos).toBeTruthy();
-          expect(repos.length).toBe(1);
-          expect(repos[0].id).toBe('r3d100012810');
+          expect(repos.id).toBe('r3d100012810');
         }
       );
 
       const req = httpTestingController.expectOne(`${backendUrl}repositories/${id}`);
       req.flush([{id: 'r3d100012810', name: 'Random Repo'}]);
-    });*/
+    });
 
   it('should get all suggested projects', () => {
     service.getSuggestedProjects().subscribe(
@@ -147,15 +178,15 @@ describe('BackendService', () => {
 
 
   it('should search repositories by filters', () => {
-    service.searchRepository({subjects: ['Cars']}).subscribe(
+    service.searchRepository({subjects: [{id: 'cars', label:'Cars'}]}).subscribe(
       repos => {
         expect(repos).toBeTruthy();
         expect(repos.length).toBe(2);
       }
     );
 
-    const req = httpTestingController.expectOne(`${backendUrl}repositories/search?subjects=Cars`);
-    expect(req.request.params.get('subjects')).toEqual('Cars');
+    const req = httpTestingController.expectOne(`${backendUrl}repositories/search?subjects=cars`);
+    expect(req.request.params.get('subjects')).toEqual('cars');
     req.flush([{}, {}]);
   });
 

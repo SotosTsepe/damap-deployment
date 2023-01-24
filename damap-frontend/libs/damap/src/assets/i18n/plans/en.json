@@ -12,10 +12,13 @@
         "title": "Title",
         "created": "Created",
         "modified": "Last modified",
-        "contact": "Contact",
+        "contact": "Contact"
+      },
+      "actions": {
         "edit": "Edit",
-        "history": "History",
-        "delete": "Delete"
+        "access": "Edit access",
+        "history": "View versions",
+        "delete": "Delete DMP"
       },
       "expanded": {
         "duration": "Project duration: {{value}}"

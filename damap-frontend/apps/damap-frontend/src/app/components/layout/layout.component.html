@@ -18,7 +18,7 @@
     </div>
     <div id="user" class="dark-theme">
       <div> {{name}} </div>
-      <button mat-icon-button [attr.aria-label]="'layout.logout' | translate" (click)="logout()">
+      <button mat-icon-button id="logout" [attr.aria-label]="'layout.logout' | translate" (click)="logout()">
         <mat-icon>logout</mat-icon>
       </button>
     </div>
@@ -45,16 +45,9 @@
             <mat-icon>close</mat-icon>
           </button>
         </div>
-        <div class="mainHeaderRight">
+        <div class="mainHeaderRight" style="margin-right: 1em;">
+          <a href="https://www.damap.org">To DAMAP website →</a>
         </div>
-        <!-- University Logo -->
-        <div id="mainHeaderLogo">
-          <a class="mat-focus-indicator" title="{{'layout.logo.text' | translate }}"
-             [href]="'layout.logo.link' | translate" rel="noopener">
-            <img src="assets/damap_logo.png" alt="Logo">
-          </a>
-        </div>
-        <!-- University Logo End -->
       </mat-toolbar-row>
       <mat-toolbar-row>
         <h1 translate>title</h1>
