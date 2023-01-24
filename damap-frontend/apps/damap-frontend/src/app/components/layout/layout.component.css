@@ -236,30 +236,6 @@ svg {
   border-color: var(--main-color-contrast);
 }
 
-/*
-*********************************
-Customizations - Overrides
-*********************************
-*/
-#mainHeader {
-  height: 50px;
-  background-color: white;
-  overflow: visible;
-}
-#mainHeader #mainHeaderLogo {
-  display: flex;
-  align-self: auto;
-  padding-right: 0px;
-  /* margin-top: -1em; */
-  margin-right: -2em;
-}
-#mainHeaderLogo A img {
-  /* adjusted to damap logo! */
-  width: 200px;
-  height: 80px;
-}
-
-
 @media only screen and (min-width: 1024px) {
 
   .mm-navbars-top {
@@ -278,23 +254,13 @@ Customizations - Overrides
   }
 
   #mainHeader {
-    /* height: 70px; */
-    height: 5em;
-  }
-  #mainHeaderLogo {
-    margin-top: -1em;
-    margin-right: -3em;
+    height: 70px;
   }
 
   #mainHeader #mainHeaderLogo A {
     top: 15px;
     padding-right: 15px;
     position: relative;
-  }
-  #mainHeaderLogo A img {
-    /* adjusted to damap logo! */
-    width: 15em;
-    height: 5em;
   }
 
   .nav-item-desktop {
