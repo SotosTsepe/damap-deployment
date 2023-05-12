@@ -1,9 +1,0 @@
-mat-radio-button {
-  display: flex;
-  flex-direction: column;
-  margin: 15px 0;
-}
-
-.costType {
-  width: 50%;
-}
