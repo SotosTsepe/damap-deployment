@@ -82,18 +82,35 @@ services:
       dockerfile: ./nginx/Dockerfile
     container_name: "nginx"
     environment:
+      NGINX_HOSTNAME: ${NGINX_HOSTNAME:-localhost}
       HTTP_AUTH_USER: ${HTTP_AUTH_USER:-admin}
       HTTP_AUTH_PASSWORD: ${HTTP_AUTH_PASSWORD:-admin}
-      SSL_CERTIFICATE: ${SSL_CERTIFICATE:-test.crt}
-      SSL_KEY: ${SSL_KEY:-test.key}
+      # Fallback paths for test SSL certificate and key
+      # When deploying to a live domain, use the let's encrypt volume path. See also .env-sample.
+      SSL_CERTIFICATE_PATH: ${SSL_CERTIFICATE_PATH:-/etc/nginx/ssl/test.crt}
+      SSL_KEY_PATH: ${SSL_KEY_PATH:-/etc/nginx/ssl/test.key}
     volumes:
       - monitoring-report:/srv/report
       # share nginx logs to host so that goaccess can access them
       - ./docker/nginx/logs:/var/log/nginx
+      - ./docker/nginx/docker-entrypoint.sh:/docker-entrypoint.sh
+      # share certbot files
+      - ./docker/certbot/conf:/etc/letsencrypt
+      - ./docker/certbot/www:/var/www/certbot
     ports:
       - "80:80"
       - "443:443"
     restart: "unless-stopped"
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  certbot:
+    image: certbot/certbot
+    container_name: "certbot"
+    restart: "unless-stopped"
+    volumes:
+      - ./docker/certbot/conf:/etc/letsencrypt
+      - ./docker/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
   # Monitoring service
   goaccess:

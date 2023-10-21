@@ -38,5 +38,8 @@ release.properties
 # Environment
 .env
 
-# Logs
+# Nginx logs
 logs/
+
+# Certbot files
+certbot/
