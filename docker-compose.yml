@@ -54,7 +54,7 @@ services:
       KEYCLOAK_USER: ${KEYCLOAK_USER:-admin}
       KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD:-admin}
       # comma separated paths of realm files to import
-      KEYCLOAK_IMPORT: ${KEYCLOAK_IMPORT:-damap-realm.json}
+      KEYCLOAK_IMPORT: /tmp/import/${KEYCLOAK_IMPORT:-damap-realm.json}
     ports:
       - "8087:8443"
     volumes:
