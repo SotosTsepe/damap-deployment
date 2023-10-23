@@ -1,6 +1,10 @@
 #!/bin/bash
 #
+# This script must be run only once to receive a Let's Encrypt certificate.
+# Afterwards, the new certificates will be requested automatically.
+#
 # Usage: ./init-letsencrypt.sh domains="example.org www.example.org example.net" staging=0 [email="user@example.com"]
+
 
 # bash strict mode
 set -euo pipefail
@@ -9,11 +13,10 @@ RSA_KEY_SIZE=4096
 DATA_PATH="./docker/certbot"
 
 # -------------------- #
-# Docker Compose Check #
+# docker compose check #
 # -------------------- #
-
-if ! [ -x "$(command -v docker-compose)" ]; then
-    echo '[ERROR] docker-compose is not installed.' >&2
+if ! docker compose version &> /dev/null; then
+    echo '[ERROR] docker compose (v2) is not installed.' >&2
     exit 1
 fi
 
@@ -55,35 +58,28 @@ fi
 # Split the space-separated string of domains into an array
 IFS=" " read -ra domains <<< "$domains"
 
-if [ -d "$DATA_PATH/conf" ]; then
+if [ -d "$DATA_PATH/conf/live" ]; then
   read -p "[WARN] Existing data found for $domains. Continue and replace existing certificate? (y/N) " decision
   if [ "$decision" != "Y" ] && [ "$decision" != "y" ]; then
     exit
   fi
 fi
 
-if [ ! -e "$DATA_PATH/conf/options-ssl-nginx.conf" ] || [ ! -e "$DATA_PATH/conf/ssl-dhparams.pem" ]; then
-  echo "[INFO] Downloading recommended TLS parameters ..."
-  mkdir -p "$DATA_PATH/conf"
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf > "$DATA_PATH/conf/options-ssl-nginx.conf"
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem > "$DATA_PATH/conf/ssl-dhparams.pem"
-fi
-
 echo "[INFO] Creating self-signed certificate for ${domains[*]} ..."
 path="/etc/letsencrypt/live/$domains"
 mkdir -p "$DATA_PATH/conf/live/$domains"
 
-docker-compose run --rm --entrypoint "\
+docker compose run --rm --entrypoint "\
   openssl req -x509 -nodes -newkey rsa:$RSA_KEY_SIZE -days 1 \
     -keyout '$path/privkey.pem' \
     -out '$path/fullchain.pem' \
     -subj '/CN=localhost'" certbot
 
 echo "[INFO] Starting nginx ..."
-docker-compose up --force-recreate -d nginx
+docker compose up --force-recreate -d nginx
 
 echo "[INFO] Deleting self-signed certificate for ${domains[*]} ..."
-docker-compose run --rm --entrypoint "\
+docker compose run --rm --entrypoint "\
   rm -Rf /etc/letsencrypt/live/$domains && \
   rm -Rf /etc/letsencrypt/archive/$domains && \
   rm -Rf /etc/letsencrypt/renewal/$domains.conf" certbot
@@ -102,9 +98,10 @@ case "$email" in
 esac
 
 # Enable staging mode if needed
+staging_arg=""
 if [ $staging != "0" ]; then staging_arg="--staging"; fi
 
-docker-compose run --rm --entrypoint "\
+docker compose run --rm --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     $staging_arg \
     $email_arg \
@@ -114,6 +111,6 @@ docker-compose run --rm --entrypoint "\
     --force-renewal" certbot
 
 echo "[INFO] Reloading nginx ..."
-docker-compose exec nginx nginx -s reload
+docker compose exec nginx nginx -s reload
 
 echo "[INFO] Done."
