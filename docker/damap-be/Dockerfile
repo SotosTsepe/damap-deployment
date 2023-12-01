@@ -1,11 +1,11 @@
 # First stage container: build the application
-FROM adoptopenjdk/maven-openjdk11 as builder
+FROM maven:3.9.5-eclipse-temurin-17-alpine as builder
 
 ARG BUILD_HOME=/home/app
 ARG BUILD_PROFILE=postgres
 ARG DAMAP_BE_VERSION
 
-RUN apt-get -y update && apt-get -y install git
+RUN apk update && apk add git
 
 WORKDIR ${BUILD_HOME}
 
@@ -24,7 +24,7 @@ RUN mvn -Duser.home=${BUILD_HOME} -B package -DskipTests -Dquarkus.profile=${BUI
 # Second stage container: contains the runtime binaries without build dependencies
 FROM rockylinux:8.5 as runner
 
-ARG JAVA_PACKAGE=java-11-openjdk-headless
+ARG JAVA_PACKAGE=java-17-openjdk-headless
 ARG RUN_JAVA_VERSION=1.3.8
 ARG BUILD_HOME=/home/app
 
