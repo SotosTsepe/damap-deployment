@@ -702,7 +702,8 @@
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "https://damap.it.tuwien.ac.at/*"
+        "https://damap.it.tuwien.ac.at/*",
+        "https://test.damap.it.tuwien.ac.at/*"
       ],
       "webOrigins": [
         "+"
