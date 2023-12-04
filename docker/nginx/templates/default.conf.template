@@ -1,4 +1,4 @@
-# HTTP server
+# HTTP server for the 'master' branch instance
 server {
     listen 80;
     listen [::]:80; # IPv6
@@ -13,7 +13,7 @@ server {
     }
 }
 
-# HTTPS server
+# HTTPS server for the 'master' branch instance
 server {
     listen 443 ssl;
     listen [::]:443 ssl; # IPv6
@@ -41,5 +41,39 @@ server {
         # Secure route
         auth_basic "Restricted Content";
         auth_basic_user_file /etc/nginx/.htpasswd;
+    }
+}
+
+# HTTP server for the 'next' branch instance (Redirect to HTTPS)
+server {
+    listen 80;
+    listen [::]:80; # IPv6
+    server_name test.${NGINX_HOSTNAME};
+
+    # Redirect to HTTPS
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# HTTPS server for the 'next' branch instance
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl; # IPv6
+    server_name test.${NGINX_HOSTNAME};
+
+    ssl_certificate ${SSL_CERTIFICATE_PATH};
+    ssl_certificate_key ${SSL_KEY_PATH};
+
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Proxy to the test application server
+    location / {
+        proxy_pass http://damap-fe-next:8080;
+    }
+    # Proxy to the API
+    location /api/ {
+        proxy_pass http://damap-be-next:8080;
     }
 }
