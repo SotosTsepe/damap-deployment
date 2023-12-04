@@ -126,6 +126,26 @@ services:
       - "7890:7890"
     restart: "unless-stopped"
 
+  damap-be-next:
+    build: 
+      context: ./docker/damap-be
+      args:
+        DAMAP_BE_VERSION: next
+    container_name: "damap-backend-next"
+    environment:
+      DAMAP_BE_ENV: ${DAMAP_BE_ENV:-DEV}
+      # see default.conf.template of nginx: caveat is test.<hostname> for 'next'
+      DAMAP_BE_HOSTNAME: test.${DAMAP_BE_HOSTNAME:-localhost}
+    restart: "unless-stopped"
+
+  damap-fe-next:
+    build: 
+      context: ./docker/damap-fe
+      args:
+        DAMAP_FE_VERSION: next
+    container_name: "damap-frontend-next"
+    restart: "unless-stopped"
+
 volumes:
   db-data:
   monitoring-data:
