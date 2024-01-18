@@ -59,7 +59,8 @@ services:
       - "8087:8443"
     volumes:
       - ./docker/keycloak/import:/tmp/import
-      - ./docker/ssl:/etc/x509/https
+      - ${KEYCLOAK_SSL_CERTIFICATE_PATH:-./docker/ssl/test.crt}:/etc/x509/https/tls.crt
+      - ${KEYCLOAK_SSL_KEY_PATH:-./docker/ssl/test.key}:/etc/x509/https/tls.key
     restart: "unless-stopped"
 
   api-mock:
@@ -89,6 +90,8 @@ services:
       # When deploying to a live domain, use the let's encrypt volume path. See also .env-sample.
       SSL_CERTIFICATE_PATH: ${SSL_CERTIFICATE_PATH:-/etc/nginx/ssl/test.crt}
       SSL_KEY_PATH: ${SSL_KEY_PATH:-/etc/nginx/ssl/test.key}
+      SSL_TEST_CERTIFICATE_PATH: ${SSL_TEST_CERTIFICATE_PATH}
+      SSL_TEST_KEY_PATH: ${SSL_TEST_KEY_PATH}
     volumes:
       - monitoring-report:/srv/report
       # share nginx logs to host so that goaccess can access them
@@ -134,8 +137,8 @@ services:
     container_name: "damap-backend-next"
     environment:
       DAMAP_BE_ENV: ${DAMAP_BE_ENV:-DEV}
-      # see default.conf.template of nginx: caveat is test.<hostname> for 'next'
-      DAMAP_BE_HOSTNAME: test.${DAMAP_BE_HOSTNAME:-localhost}
+      # see default.conf.template of nginx: caveat is test-<hostname> for 'next'
+      DAMAP_BE_HOSTNAME: test-${DAMAP_BE_HOSTNAME:-localhost}
     restart: "unless-stopped"
 
   damap-fe-next:
