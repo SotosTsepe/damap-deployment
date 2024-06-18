@@ -27,11 +27,11 @@ server {
 
     # Proxy to the application server
     location / {
-        proxy_pass http://damap-fe:8080;
+        proxy_pass http://damap-frontend:8080;
     }
     # Proxy to the API
     location /api/ {
-        proxy_pass http://damap-be:8080;
+        proxy_pass http://damap-backend:8080;
     }
     # Proxy to the server statistics
     location /stats {
