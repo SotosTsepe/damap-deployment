@@ -13,7 +13,7 @@ damap:
     scope: 'openid profile email offline_access microprofile-jwt roles personID' # your-backend-authentication-scope, including your variable for your user IDs
     user: 'personID' # the variable name for your user IDs
   datasource:
-    url: jdbc:postgresql://damap-db:5432/damap # jdbc:your-datasource-language:your-datasource.address
+    url: jdbc:postgresql://postgres:5432/damap # jdbc:your-datasource-language:your-datasource.address
     username: damap # your-datasource-username
     password: damap # your-datasource-password
     db-kind: postgresql # your database
@@ -21,7 +21,7 @@ damap:
     recommendation: [ your-recommened-repositories ]
   projects-url: http://api-mock:80
   persons-url: http://api-mock:80
-  fits-url: http://your.fits.service:1234
+  fits-url: http://fits-service:8080/fits
   person-services:
     - display-text: 'University'
       query-value: 'UNIVERSITY'

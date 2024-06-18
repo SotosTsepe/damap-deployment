@@ -1,8 +1,44 @@
-version: '3.3'
-
 services:
-  damap-be:
-    build: 
+  nginx:
+    build:
+      # Use docker directory as context since ssl certificates are to be used from multiple services
+      # With this way we can copy the certificates to the container while keeping them outside of a
+      # specific service
+      context: ./docker
+      dockerfile: ./nginx/Dockerfile
+    container_name: "nginx"
+    environment:
+      NGINX_HOSTNAME: ${NGINX_HOSTNAME:-localhost}
+      HTTP_AUTH_USER: ${HTTP_AUTH_USER:-admin}
+      HTTP_AUTH_PASSWORD: ${HTTP_AUTH_PASSWORD:-admin}
+      # Fallback paths for test SSL certificate and key
+      # When deploying to a live domain, use the let's encrypt volume path. See also .env-sample.
+      SSL_CERTIFICATE_PATH: ${SSL_CERTIFICATE_PATH:-/etc/nginx/ssl/test.crt}
+      SSL_KEY_PATH: ${SSL_KEY_PATH:-/etc/nginx/ssl/test.key}
+      SSL_TEST_CERTIFICATE_PATH: ${SSL_TEST_CERTIFICATE_PATH:-/etc/nginx/ssl/test.crt}
+      SSL_TEST_KEY_PATH: ${SSL_TEST_KEY_PATH:-/etc/nginx/ssl/test.key}
+    volumes:
+      - monitoring-report:/srv/report
+      # share nginx logs to host so that goaccess can access them
+      - ./docker/nginx/logs:/var/log/nginx
+      - ./docker/nginx/docker-entrypoint.sh:/docker-entrypoint.sh
+      # share certbot files
+      - ./docker/certbot/conf:/etc/letsencrypt
+      - ./docker/certbot/www:/var/www/certbot
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: "unless-stopped"
+    depends_on:
+      - damap-frontend
+      - damap-backend
+      - keycloak
+      - damap-frontend-next
+      - damap-backend-next
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  damap-backend:
+    build:
       context: ./docker/damap-be
       args:
         DAMAP_BE_VERSION: ${DAMAP_BE_VERSION:-master}
@@ -11,30 +47,52 @@ services:
       DAMAP_BE_ENV: ${DAMAP_BE_ENV:-DEV}
       DAMAP_BE_HOSTNAME: ${DAMAP_BE_HOSTNAME:-localhost}
     restart: "unless-stopped"
+    depends_on:
+      - postgres
+      - keycloak
+      - api-mock
+      - fits-service
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:8080/q/health/live"
+        ]
+      interval: 30s
+      timeout: 15s
+      retries: 5
 
-  damap-fe:
-    build: 
+  damap-frontend:
+    build:
       context: ./docker/damap-fe
       args:
         DAMAP_FE_VERSION: ${DAMAP_FE_VERSION:-master}
     container_name: "damap-frontend"
     restart: "unless-stopped"
+    depends_on:
+      - damap-backend
 
-  damap-db:
+  postgres:
     build: ./docker/postgres/
-    container_name: "damap-db"
+    container_name: "postgres"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES:-damap,keycloak}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
-     - db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
     restart: "unless-stopped"
     healthcheck:
-      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      test:
+        [
+          "CMD-SHELL",
+          "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"
+        ]
       interval: 30s
       timeout: 15s
       retries: 5
@@ -62,6 +120,39 @@ services:
       - ${KEYCLOAK_SSL_CERTIFICATE_PATH:-./docker/ssl/test.crt}:/etc/x509/https/tls.crt
       - ${KEYCLOAK_SSL_KEY_PATH:-./docker/ssl/test.key}:/etc/x509/https/tls.key
     restart: "unless-stopped"
+    depends_on:
+      - postgres
+
+  damap-backend-next:
+    build:
+      context: ./docker/damap-be
+      args:
+        DAMAP_BE_VERSION: next
+    container_name: "damap-backend-next"
+    environment:
+      DAMAP_BE_ENV: ${DAMAP_BE_ENV:-DEV}
+      # see default.conf.template of nginx: caveat is test-<hostname> for 'next'
+      DAMAP_BE_HOSTNAME: test-${DAMAP_BE_HOSTNAME:-localhost}
+    restart: "unless-stopped"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:8080/q/health/live"
+        ]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+
+  damap-frontend-next:
+    build:
+      context: ./docker/damap-fe
+      args:
+        DAMAP_FE_VERSION: next
+    container_name: "damap-frontend-next"
+    restart: "unless-stopped"
 
   api-mock:
     image: clue/json-server
@@ -74,37 +165,11 @@ services:
       - "8091:80"
     restart: "unless-stopped"
 
-  nginx:
-    build:
-      # Use docker directory as context since ssl certificates are to be used from multiple services
-      # With this way we can copy the certificates to the container while keeping them outside of a
-      # specific service
-      context: ./docker
-      dockerfile: ./nginx/Dockerfile
-    container_name: "nginx"
-    environment:
-      NGINX_HOSTNAME: ${NGINX_HOSTNAME:-localhost}
-      HTTP_AUTH_USER: ${HTTP_AUTH_USER:-admin}
-      HTTP_AUTH_PASSWORD: ${HTTP_AUTH_PASSWORD:-admin}
-      # Fallback paths for test SSL certificate and key
-      # When deploying to a live domain, use the let's encrypt volume path. See also .env-sample.
-      SSL_CERTIFICATE_PATH: ${SSL_CERTIFICATE_PATH:-/etc/nginx/ssl/test.crt}
-      SSL_KEY_PATH: ${SSL_KEY_PATH:-/etc/nginx/ssl/test.key}
-      SSL_TEST_CERTIFICATE_PATH: ${SSL_TEST_CERTIFICATE_PATH}
-      SSL_TEST_KEY_PATH: ${SSL_TEST_KEY_PATH}
-    volumes:
-      - monitoring-report:/srv/report
-      # share nginx logs to host so that goaccess can access them
-      - ./docker/nginx/logs:/var/log/nginx
-      - ./docker/nginx/docker-entrypoint.sh:/docker-entrypoint.sh
-      # share certbot files
-      - ./docker/certbot/conf:/etc/letsencrypt
-      - ./docker/certbot/www:/var/www/certbot
+  fits-service:
+    image: islandora/fits:main
+    restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
-    restart: "unless-stopped"
-    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+      - "8089:8080"
 
   certbot:
     image: certbot/certbot
@@ -127,26 +192,6 @@ services:
       - ./docker/nginx/logs:/srv/logs
     ports:
       - "7890:7890"
-    restart: "unless-stopped"
-
-  damap-be-next:
-    build: 
-      context: ./docker/damap-be
-      args:
-        DAMAP_BE_VERSION: next
-    container_name: "damap-backend-next"
-    environment:
-      DAMAP_BE_ENV: ${DAMAP_BE_ENV:-DEV}
-      # see default.conf.template of nginx: caveat is test-<hostname> for 'next'
-      DAMAP_BE_HOSTNAME: test-${DAMAP_BE_HOSTNAME:-localhost}
-    restart: "unless-stopped"
-
-  damap-fe-next:
-    build: 
-      context: ./docker/damap-fe
-      args:
-        DAMAP_FE_VERSION: next
-    container_name: "damap-frontend-next"
     restart: "unless-stopped"
 
 volumes:
