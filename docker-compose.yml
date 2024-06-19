@@ -98,30 +98,44 @@ services:
       retries: 5
 
   keycloak:
-    image: jboss/keycloak
+    image: quay.io/keycloak/keycloak:${KC_VERSION:-latest}
     container_name: "keycloak"
     environment:
-      PROXY_ADDRESS_FORWARDING: "true"
-      DB_VENDOR: POSTGRES
-      DB_ADDR: damap-db
-      # the DB_DATABASE has to match one of the values provided in the POSTGRES_MULTIPLE_DATABASES
-      DB_DATABASE: ${KEYCLOAK_DB:-keycloak}
-      DB_USER: ${KEYCLOAK_DB_USER:-keycloak}
-      DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
-      DB_SCHEMA: public
-      KEYCLOAK_USER: ${KEYCLOAK_USER:-admin}
-      KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD:-admin}
-      # comma separated paths of realm files to import
-      KEYCLOAK_IMPORT: /tmp/import/${KEYCLOAK_IMPORT:-damap-realm.json}
+      KC_DB: postgres
+      KC_DB_SCHEMA: public
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+      # the KC_DB_URL_DATABASE has to match one of the values provided in the POSTGRES_MULTIPLE_DATABASES
+      KC_DB_URL_DATABASE: ${KC_DB_URL_DATABASE:-keycloak}
+      KC_DB_URL_HOST: postgres
+      KC_DB_USERNAME: ${KC_DB_USERNAME:-keycloak}
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: ${KC_HOST:-localhost}
+      KC_HTTP_RELATIVE_PATH: ${KC_HTTP_RELATIVE_PATH:-/auth}
+      KC_HTTPS_CERTIFICATE_FILE: /etc/pki/tls/certs/${KC_HTTPS_CERTIFICATE_FILE:-tls.crt}
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /etc/pki/tls/private/${KC_HTTPS_CERTIFICATE_KEY_FILE:-tls.key}
+      KC_PROXY: ${KC_PROXY:-edge}
+      KEYCLOAK_ADMIN: ${KC_ADMIN_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-admin}
     ports:
       - "8087:8443"
     volumes:
-      - ./docker/keycloak/import:/tmp/import
-      - ${KEYCLOAK_SSL_CERTIFICATE_PATH:-./docker/ssl/test.crt}:/etc/x509/https/tls.crt
-      - ${KEYCLOAK_SSL_KEY_PATH:-./docker/ssl/test.key}:/etc/x509/https/tls.key
+      - ./docker/keycloak/export:/opt/keycloak/data/export
+      - ./docker/keycloak/import/${KC_REALM_FILE:-damap-realm.json}:/opt/keycloak/data/import/realm.json:ro
+      - ./docker/ssl/${KC_HTTPS_CERTIFICATE_FILE:-test.crt}:/etc/pki/tls/certs/tls.crt:ro
+      - ./docker/ssl/${KC_HTTPS_CERTIFICATE_KEY_FILE:-test.key}:/etc/pki/tls/private/tls.key:ro
     restart: "unless-stopped"
     depends_on:
       - postgres
+    command: start${KC_DEV_MODE:+-dev} --import-realm
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /auth/health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 15
 
   damap-backend-next:
     build:
