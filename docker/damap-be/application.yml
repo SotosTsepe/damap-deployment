@@ -18,18 +18,19 @@ damap:
     password: damap # your-datasource-password
     db-kind: postgresql # your database
   repositories:
-      # Zenodo, Open Science Framework, DRYAD, Mendeley Data
-    recommendation: ['r3d100010468', 'r3d100011137', 'r3d100000044', 'r3d100011868']
+    # Zenodo, Open Science Framework, DRYAD, Mendeley Data
+    recommendation:
+      ["r3d100010468", "r3d100011137", "r3d100000044", "r3d100011868"]
   projects-url: http://api-mock:80
   persons-url: http://api-mock:80
   fits-url: http://fits-service:8080/fits
   person-services:
     - display-text: "University"
       query-value: "UNIVERSITY"
-      class-name: "at.ac.tuwien.damap.rest.persons.MockUniversityPersonServiceImpl"
+      class-name: "org.damap.base.rest.persons.MockUniversityPersonServiceImpl"
     - display-text: "ORCID"
       query-value: "ORCID"
-      class-name: "at.ac.tuwien.damap.rest.persons.orcid.ORCIDPersonServiceImpl"
+      class-name: "org.damap.base.rest.persons.orcid.ORCIDPersonServiceImpl"
 
 invenio:
   shared-secret: "secret stuff or token"
@@ -73,7 +74,14 @@ quarkus:
 
   liquibase:
     migrate-at-start: true
-    change-log: at/ac/tuwien/damap/db/changeLog-root.yaml
+    change-log: org/damap/base/db/changeLog-root.yaml
+
+  smallrye-openapi:
+    info-title: DAMAP API
+
+  swagger-ui:
+    always-include: true # set to false if swagger-ui should only be available in dev mode
+    oauth-client-id: ${damap.auth.frontend.client}
 
 rest:
   projects/mp-rest/url: ${damap.projects-url}
@@ -81,7 +89,7 @@ rest:
   fits/mp-rest/url: ${damap.fits-url}
   r3data:
     repositories/mp-rest/url: https://www.re3data.org/api
-    repositories/mp-rest/scope: javax.inject.Singleton
+    repositories/mp-rest/scope: jakarta.inject.Singleton
   openaire/mp-rest/url: http://api.openaire.eu/search/
   orcid:
     search/mp-rest/url: https://pub.orcid.org
@@ -99,7 +107,7 @@ rest:
     datasource:
       db-kind: oracle
     hibernate-orm:
-      dialect: org.hibernate.dialect.Oracle12cDialect
+      dialect: org.hibernate.dialect.OraclecDialect
 
 "%postgres":
   quarkus:
@@ -111,7 +119,7 @@ rest:
 "%test":
   damap:
     repositories:
-      recommendation: ['r3d100010468'] # Re3Data id(s)
+      recommendation: ["r3d100010468"] # Re3Data id(s)
   quarkus:
     datasource:
       db-kind: h2
