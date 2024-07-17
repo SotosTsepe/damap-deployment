@@ -1,4 +1,4 @@
-FROM trion/ng-cli:17.2.1 as deps
+FROM trion/ng-cli:18.0.3 AS deps
 
 ARG DAMAP_FE_VERSION
 
@@ -14,7 +14,7 @@ COPY ./layout_components/* /app/apps/damap-frontend/src/app/components/layout/
 ENV PATH="$PATH:/app/node_modules/@angular/cli/bin/"
 
 # install and build the application on the builder container
-RUN npm install --ignore-scripts -g "nx@18.0.4"
+RUN npm install --ignore-scripts -g "nx@19.3.0"
 RUN npm ci --ignore-scripts
 RUN npx nx build damap-frontend
 
