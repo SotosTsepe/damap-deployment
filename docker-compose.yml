@@ -33,15 +33,15 @@ services:
       - damap-frontend
       - damap-backend
       - keycloak
-      - damap-frontend-next
-      - damap-backend-next
+      - damap-frontend-alt
+      - damap-backend-alt
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
   damap-backend:
     build:
       context: ./docker/damap-be
       args:
-        DAMAP_BE_VERSION: ${DAMAP_BE_VERSION:-master}
+        DAMAP_BE_VERSION: ${DAMAP_BE_VERSION:-next}
     container_name: "damap-backend"
     environment:
       DAMAP_BE_ENV: ${DAMAP_BE_ENV:-DEV}
@@ -65,10 +65,7 @@ services:
       retries: 5
 
   damap-frontend:
-    build:
-      context: ./docker/damap-fe
-      args:
-        DAMAP_FE_VERSION: ${DAMAP_FE_VERSION:-master}
+    image: ghcr.io/tuwien-csd/damap-frontend:${DAMAP_FE_VERSION:-latest}
     container_name: "damap-frontend"
     restart: "unless-stopped"
     depends_on:
@@ -135,14 +132,15 @@ services:
       timeout: 2s
       retries: 15
 
-  damap-backend-next:
+  # alternate backend aimed to test specific versions (tags)
+  damap-backend-alt:
     build:
       context: ./docker/damap-be
       args:
-        DAMAP_BE_VERSION: next
-    container_name: "damap-backend-next"
+        DAMAP_BE_VERSION: ${DAMAP_BE_ALT_VERSION:-next}
+    container_name: "damap-backend-alt"
     environment:
-      DAMAP_BE_ENV: ${DAMAP_BE_ENV:-DEV}
+      DAMAP_BE_ENV: ${DAMAP_BE_ALT_ENV:-DEV}
       # see default.conf.template of nginx: caveat is test-<hostname> for 'next'
       DAMAP_BE_HOSTNAME: test-${DAMAP_BE_HOSTNAME:-localhost}
     restart: "unless-stopped"
@@ -158,12 +156,10 @@ services:
       timeout: 15s
       retries: 5
 
-  damap-frontend-next:
-    build:
-      context: ./docker/damap-fe
-      args:
-        DAMAP_FE_VERSION: next
-    container_name: "damap-frontend-next"
+  # alternate frontend aimed to test specific versions (tags)
+  damap-frontend-alt:
+    image: ghcr.io/tuwien-csd/damap-frontend:${DAMAP_FE_ALT_VERSION:-latest}
+    container_name: "damap-frontend-alt"
     restart: "unless-stopped"
 
   api-mock:
