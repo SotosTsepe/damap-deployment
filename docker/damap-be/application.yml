@@ -13,10 +13,10 @@ damap:
     scope: "openid profile email offline_access microprofile-jwt roles personID" # your-backend-authentication-scope, including your variable for your user IDs
     user: "personID" # the variable name for your user IDs
   datasource:
-    url: jdbc:postgresql://postgres:5432/damap # jdbc:your-datasource-language:your-datasource.address
-    username: damap # your-datasource-username
-    password: damap # your-datasource-password
-    db-kind: postgresql # your database
+    url: jdbc:postgresql://postgres:5432/${DAMAP_BE_DB_NAME}
+    username: ${DAMAP_BE_DB_USER}
+    password: ${DAMAP_BE_DB_PASSWORD}
+    db-kind: postgresql
   repositories:
     # Zenodo, Open Science Framework, DRYAD, Mendeley Data
     recommendation:
