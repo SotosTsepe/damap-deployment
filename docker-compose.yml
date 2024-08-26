@@ -12,7 +12,7 @@ services:
       HTTP_AUTH_USER: ${HTTP_AUTH_USER:-admin}
       HTTP_AUTH_PASSWORD: ${HTTP_AUTH_PASSWORD:-admin}
       # Fallback paths for test SSL certificate and key
-      # When deploying to a live domain, use the let's encrypt volume path. See also .env-sample.
+      # When deploying to a live domain, use the let's encrypt volume path. See `example.env`.
       SSL_CERTIFICATE_PATH: ${SSL_CERTIFICATE_PATH:-/etc/nginx/ssl/test.crt}
       SSL_KEY_PATH: ${SSL_KEY_PATH:-/etc/nginx/ssl/test.key}
       SSL_TEST_CERTIFICATE_PATH: ${SSL_TEST_CERTIFICATE_PATH:-/etc/nginx/ssl/test.crt}
@@ -44,6 +44,10 @@ services:
         DAMAP_BE_VERSION: ${DAMAP_BE_VERSION:-next}
     container_name: "damap-backend"
     environment:
+      # the below has to match one value of specified POSTGRES_MULTIPLE_DATABASES
+      DAMAP_BE_DB_NAME: ${DAMAP_BE_DB_NAME:-damap}
+      DAMAP_BE_DB_PASSWORD: ${DAMAP_BE_DB_PASSWORD:-damap}
+      DAMAP_BE_DB_USER: ${DAMAP_BE_DB_USER:-damap}
       DAMAP_BE_ENV: ${DAMAP_BE_ENV:-DEV}
       DAMAP_BE_HOSTNAME: ${DAMAP_BE_HOSTNAME:-localhost}
     restart: "unless-stopped"
@@ -53,13 +57,7 @@ services:
       - api-mock
       - fits-service
     healthcheck:
-      test:
-        [
-          "CMD",
-          "curl",
-          "-f",
-          "http://localhost:8080/q/health/live"
-        ]
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/q/health/live" ]
       interval: 30s
       timeout: 15s
       retries: 5
@@ -76,20 +74,16 @@ services:
     container_name: "postgres"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_EXTRA_DBS: ${POSTGRES_EXTRA_DBS:-damap,damap_alt,keycloak}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES:-damap,keycloak}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     restart: "unless-stopped"
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"
-        ]
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'" ]
       interval: 30s
       timeout: 15s
       retries: 5
@@ -123,11 +117,7 @@ services:
       - postgres
     command: start${KC_DEV_MODE:+-dev} --import-realm
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /auth/health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"
-        ]
+      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /auth/health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'" ]
       interval: 5s
       timeout: 2s
       retries: 15
@@ -140,18 +130,16 @@ services:
         DAMAP_BE_VERSION: ${DAMAP_BE_ALT_VERSION:-next}
     container_name: "damap-backend-alt"
     environment:
+      # the below has to match one value of specified POSTGRES_MULTIPLE_DATABASES
+      DAMAP_BE_DB_NAME: ${DAMAP_BE_ALT_DB_NAME:-damap_alt}
+      DAMAP_BE_DB_PASSWORD: ${DAMAP_BE_ALT_DB_PASSWORD:-damap_alt}
+      DAMAP_BE_DB_USER: ${DAMAP_BE_ALT_DB_USER:-damap_alt}
       DAMAP_BE_ENV: ${DAMAP_BE_ALT_ENV:-DEV}
-      # see default.conf.template of nginx: caveat is test-<hostname> for 'next'
+      # see default.conf.template of nginx: caveat is test-<hostname> for 'alt'
       DAMAP_BE_HOSTNAME: test-${DAMAP_BE_HOSTNAME:-localhost}
     restart: "unless-stopped"
     healthcheck:
-      test:
-        [
-          "CMD",
-          "curl",
-          "-f",
-          "http://localhost:8080/q/health/live"
-        ]
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/q/health/live" ]
       interval: 30s
       timeout: 15s
       retries: 5
