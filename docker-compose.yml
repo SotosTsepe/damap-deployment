@@ -70,7 +70,10 @@ services:
       - damap-backend
 
   postgres:
-    build: ./docker/postgres/
+    build:
+      context: ./docker/postgres/
+      args:
+        POSTGRES_VERSION: ${POSTGRES_VERSION:-latest}
     container_name: "postgres"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
