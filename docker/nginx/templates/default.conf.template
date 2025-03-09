@@ -45,6 +45,14 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
+    # Proxy to OpenAPI documentation
+    location /q/openapi {
+        proxy_pass http://damap-backend:8080;
+    }
+    # Proxy to Swagger UI
+    location /q/swagger-ui {
+        proxy_pass http://damap-backend:8080;
+    }
     # Proxy to the server statistics
     location /stats {
         # Serve goaccess html file
@@ -86,6 +94,14 @@ server {
     }
     # Proxy to the API
     location /api/ {
+        proxy_pass http://damap-backend-alt:8080;
+    }
+    # Proxy to OpenAPI documentation
+    location /q/openapi {
+        proxy_pass http://damap-backend-alt:8080;
+    }
+    # Proxy to Swagger UI
+    location /q/swagger-ui {
         proxy_pass http://damap-backend-alt:8080;
     }
 }
