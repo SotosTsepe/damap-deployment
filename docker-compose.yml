@@ -1,33 +1,12 @@
 services:
   nginx:
     build:
-      # Use docker directory as context since ssl certificates are to be used from multiple services
-      # With this way we can copy the certificates to the container while keeping them outside of a
-      # specific service
+      # Use docker directory as context since ssl certificates are to be used from multiple services.
+      # This way we can copy the certificates to the container while keeping them outside of a
+      # specific service.
       context: ./docker
       dockerfile: ./nginx/Dockerfile
-    container_name: "nginx"
-    environment:
-      NGINX_HOSTNAME: ${NGINX_HOSTNAME:-localhost}
-      HTTP_AUTH_USER: ${HTTP_AUTH_USER:-admin}
-      HTTP_AUTH_PASSWORD: ${HTTP_AUTH_PASSWORD:-admin}
-      # Fallback paths for test SSL certificate and key
-      # When deploying to a live domain, use the let's encrypt volume path. See `example.env`.
-      SSL_CERTIFICATE_PATH: ${SSL_CERTIFICATE_PATH:-/etc/nginx/ssl/test.crt}
-      SSL_KEY_PATH: ${SSL_KEY_PATH:-/etc/nginx/ssl/test.key}
-      SSL_TEST_CERTIFICATE_PATH: ${SSL_TEST_CERTIFICATE_PATH:-/etc/nginx/ssl/test.crt}
-      SSL_TEST_KEY_PATH: ${SSL_TEST_KEY_PATH:-/etc/nginx/ssl/test.key}
-    volumes:
-      - monitoring-report:/srv/report
-      # share nginx logs to host so that goaccess can access them
-      - ./docker/nginx/logs:/var/log/nginx
-      - ./docker/nginx/docker-entrypoint.sh:/docker-entrypoint.sh
-      # share certbot files
-      - ./docker/certbot/conf:/etc/letsencrypt
-      - ./docker/certbot/www:/var/www/certbot
-    ports:
-      - "80:80"
-      - "443:443"
+    container_name: "damap-nginx"
     restart: "unless-stopped"
     depends_on:
       - damap-frontend
@@ -35,7 +14,29 @@ services:
       - keycloak
       - damap-frontend-alt
       - damap-backend-alt
-    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    environment:
+      NGINX_HOSTNAME: ${NGINX_HOSTNAME:-localhost}
+      HTTP_AUTH_USER: ${HTTP_AUTH_USER:-admin}
+      HTTP_AUTH_PASSWORD: ${HTTP_AUTH_PASSWORD:-admin}
+      # Fallback paths for test SSL certificate and key
+      # When deploying to a live domain, use the Let's Encrypt volume path. See `example.env`.
+      SSL_CERTIFICATE_PATH: ${SSL_CERTIFICATE_PATH:-/etc/nginx/ssl/test.crt}
+      SSL_KEY_PATH: ${SSL_KEY_PATH:-/etc/nginx/ssl/test.key}
+      SSL_TEST_CERTIFICATE_PATH: ${SSL_TEST_CERTIFICATE_PATH:-/etc/nginx/ssl/test.crt}
+      SSL_TEST_KEY_PATH: ${SSL_TEST_KEY_PATH:-/etc/nginx/ssl/test.key}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - monitoring-report:/srv/report
+      # Share Nginx logs with host for GoAccess analysis
+      - ./docker/nginx/logs:/var/log/nginx
+      - ./docker/nginx/docker-entrypoint.sh:/docker-entrypoint.sh
+      # Share certbot files
+      - ./docker/certbot/conf:/etc/letsencrypt
+      - ./docker/certbot/www:/var/www/certbot
+    command: >
+      /bin/sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
 
   damap-backend:
     build:
@@ -43,6 +44,12 @@ services:
       args:
         DAMAP_BE_VERSION: ${DAMAP_BE_VERSION:-next}
     container_name: "damap-backend"
+    restart: "unless-stopped"
+    depends_on:
+      - postgres
+      - keycloak
+      - api-mock
+      - fits-service
     environment:
       # the below has to match one value of specified POSTGRES_MULTIPLE_DATABASES
       DAMAP_BE_DB_NAME: ${DAMAP_BE_DB_NAME:-damap}
@@ -50,12 +57,6 @@ services:
       DAMAP_BE_DB_USER: ${DAMAP_BE_DB_USER:-damap}
       DAMAP_BE_ENV: ${DAMAP_BE_ENV:-DEV}
       DAMAP_BE_HOSTNAME: ${DAMAP_BE_HOSTNAME:-localhost}
-    restart: "unless-stopped"
-    depends_on:
-      - postgres
-      - keycloak
-      - api-mock
-      - fits-service
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/q/health/live" ]
       interval: 30s
@@ -74,7 +75,8 @@ services:
       context: ./docker/postgres/
       args:
         POSTGRES_VERSION: ${POSTGRES_VERSION:-latest}
-    container_name: "postgres"
+    container_name: "damap-postgres"
+    restart: "unless-stopped"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
       POSTGRES_EXTRA_DBS: ${POSTGRES_EXTRA_DBS:-damap,damap_alt,keycloak}
@@ -84,21 +86,23 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
-    restart: "unless-stopped"
     healthcheck:
-      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}" ]
       interval: 30s
       timeout: 15s
       retries: 5
 
   keycloak:
     image: quay.io/keycloak/keycloak:${KC_VERSION:-latest}
-    container_name: "keycloak"
+    container_name: "damap-keycloak"
+    restart: "unless-stopped"
+    depends_on:
+      - postgres
     environment:
       KC_DB: postgres
       KC_DB_SCHEMA: public
       KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
-      # the KC_DB_URL_DATABASE has to match one of the values provided in the POSTGRES_MULTIPLE_DATABASES
+      # Must match one of the values in POSTGRES_MULTIPLE_DATABASES
       KC_DB_URL_DATABASE: ${KC_DB_URL_DATABASE:-keycloak}
       KC_DB_URL_HOST: postgres
       KC_DB_USERNAME: ${KC_DB_USERNAME:-keycloak}
@@ -115,32 +119,38 @@ services:
       - ./docker/keycloak/import/${KC_REALM_FILE:-damap-realm.json}:/opt/keycloak/data/import/realm.json:ro
       - ./docker/ssl/${KC_HTTPS_CERTIFICATE_FILE:-test.crt}:/etc/pki/tls/certs/tls.crt:ro
       - ./docker/ssl/${KC_HTTPS_CERTIFICATE_KEY_FILE:-test.key}:/etc/pki/tls/private/tls.key:ro
-    restart: "unless-stopped"
-    depends_on:
-      - postgres
     command: start${KC_DEV_MODE:+-dev} --import-realm
     healthcheck:
-      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /auth/health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'" ]
+      test:
+        - "CMD-SHELL"
+        - "exec 3<>/dev/tcp/localhost/8080 && \
+           echo -e 'GET /auth/health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && \
+           cat <&3 | grep -q '200 OK'"
       interval: 5s
       timeout: 2s
       retries: 15
 
-  # alternate backend aimed to test specific versions (tags)
+  # Alternate backend aimed to test specific versions (tags)
   damap-backend-alt:
     build:
       context: ./docker/damap-be
       args:
         DAMAP_BE_VERSION: ${DAMAP_BE_ALT_VERSION:-next}
     container_name: "damap-backend-alt"
+    restart: "unless-stopped"
+    depends_on:
+      - postgres
+      - keycloak
+      - api-mock
+      - fits-service
     environment:
-      # the below has to match one value of specified POSTGRES_MULTIPLE_DATABASES
+      # Must match one of the values in POSTGRES_MULTIPLE_DATABASES
       DAMAP_BE_DB_NAME: ${DAMAP_BE_ALT_DB_NAME:-damap_alt}
       DAMAP_BE_DB_PASSWORD: ${DAMAP_BE_ALT_DB_PASSWORD:-damap_alt}
       DAMAP_BE_DB_USER: ${DAMAP_BE_ALT_DB_USER:-damap_alt}
       DAMAP_BE_ENV: ${DAMAP_BE_ALT_ENV:-DEV}
-      # see default.conf.template of nginx: caveat is test-<hostname> for 'alt'
+      # Matches 'test-<hostname>' convention in nginx default.conf.template
       DAMAP_BE_HOSTNAME: test-${DAMAP_BE_HOSTNAME:-localhost}
-    restart: "unless-stopped"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/q/health/live" ]
       interval: 30s
@@ -152,51 +162,65 @@ services:
     image: ghcr.io/tuwien-csd/damap-frontend:${DAMAP_FE_ALT_VERSION:-latest}
     container_name: "damap-frontend-alt"
     restart: "unless-stopped"
+    depends_on:
+      - damap-backend-alt
 
   api-mock:
     image: clue/json-server
-    container_name: "mock-api"
+    restart: "unless-stopped"
+    container_name: "damap-mock-api"
     command: db.json --routes routes.json
     volumes:
       - ./docker/api-mock/data/db.json:/data/db.json
       - ./docker/api-mock/data/routes.json:/data/routes.json
     ports:
       - "8091:80"
-    restart: "unless-stopped"
 
   fits-service:
     image: islandora/fits:main
-    restart: unless-stopped
+    container_name: "damap-fits"
+    restart: "unless-stopped"
     ports:
       - "8089:8080"
 
   gotenberg:
     image: gotenberg/gotenberg:8
+    container_name: "damap-gotenberg"
+    restart: "unless-stopped"
     ports:
       - "3000:3000"
 
   certbot:
     image: certbot/certbot
-    container_name: "certbot"
+    container_name: "damap-certbot"
     restart: "unless-stopped"
+    depends_on:
+      - nginx
     volumes:
       - ./docker/certbot/conf:/etc/letsencrypt
       - ./docker/certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    entrypoint: >
+      /bin/sh -c 'trap exit TERM;
+      while :; do
+        certbot renew;
+        sleep 12h & wait $${!};
+      done;
 
   # Monitoring service
   goaccess:
     build: ./docker/goaccess
-    container_name: goaccess
+    container_name: "damap-goaccess"
+    restart: "unless-stopped"
+    depends_on:
+      - nginx
     environment:
-      - TZ=${TZ:-Europe/Vienna}
+      TZ: ${TZ:-Europe/Vienna}
     volumes:
       - monitoring-data:/srv/data
       - monitoring-report:/srv/report
       - ./docker/nginx/logs:/srv/logs
     ports:
       - "7890:7890"
-    restart: "unless-stopped"
 
 volumes:
   db-data:
