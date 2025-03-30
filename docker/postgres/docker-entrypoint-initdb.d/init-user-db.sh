@@ -1,7 +1,6 @@
 #!/bin/bash
 
-set -e
-set -u
+set -eu
 
 function create_user_and_database() {
 	local database=$1
@@ -10,6 +9,9 @@ function create_user_and_database() {
 	    CREATE USER $database WITH PASSWORD '$database';
 	    CREATE DATABASE $database;
 	    GRANT ALL PRIVILEGES ON DATABASE $database TO $database;
+	    \c $database
+	    ALTER SCHEMA public OWNER TO $database;
+	    GRANT ALL PRIVILEGES ON SCHEMA public TO $database;
 EOSQL
 }
 
